@@ -6,17 +6,17 @@ const ordersRouter = require('./routes/orders');
 
 app.use(express.json());
 
-// Usar las rutas de manera modular
+// Use routes in a modular way
 app.use('/users', usersRouter);
 app.use('/products', productsRouter);
 app.use('/orders', ordersRouter);
 
-// Manejar error 404 para rutas no definidas
+// Manage error 404 for non-defined routes
 app.use((req, res) => {
-  res.status(404).json({ message: 'Ruta no encontrada' });
+  res.status(404).json({ message: 'Route not found' });
 });
 
 const PORT = 3000;
 app.listen(PORT, () => {
-  console.log(`Servidor corriendo en el puerto ${PORT}`);
+  console.log(`Server running in port ${PORT}`);
 });
