@@ -1,57 +1,99 @@
 const express = require('express');
 const router = express.Router();
 
-let orders = []; // Array created to store the orders
+// Import the arrays from products and users
+const { products } = require('./products');
+const { users } = require('./users');
 
-// Validate the correct order format
+let orders = []; // Array for storing orders
+
+// Middleware to validate the correct order format
 function validateOrder(req, res, next) {
-    const { id, userId, productId, quantity, status } = req.body;
+  const { id, userId, productId, quantity, status } = req.body;
 
-    // Check all required fields and their type
-    if (!id || typeof id !== 'number') {
-        return res.status(400).json({ message: 'Invalid or missing camp: id' });
+  // Check if id is a positive integer
+  if (!Number.isInteger(Number(id)) || Number(id) <= 0) {
+    return res.status(400).json({ message: 'Invalid or missing field: id. It must be a positive integer.' });
+  }
+
+  // Check if userId is a non-empty string
+  if (typeof userId !== 'string' || userId.trim() === "") {
+    return res.status(400).json({ message: 'Invalid or missing field: userId' });
+  }
+
+  // Check if productId is a non-empty string
+  if (typeof productId !== 'string' || productId.trim() === "") {
+    return res.status(400).json({ message: 'Invalid or missing field: productId' });
+  }
+
+  // Check if quantity is a positive number
+  if (!Number.isInteger(Number(quantity)) || Number(quantity) <= 0) {
+    return res.status(400).json({ message: 'Invalid or missing field: quantity. It must be a positive number.' });
+  }
+
+  // Check if status is a non-empty string
+  if (typeof status !== 'string' || status.trim() === "") {
+    return res.status(400).json({ message: 'Invalid or missing field: status' });
+  }
+
+  // Ensure the ID is unique only during creation
+  if (req.method === 'POST') {
+    const existingOrder = orders.find(o => o.id === String(id));
+    if (existingOrder) {
+      return res.status(400).json({ message: 'ID already exists, please use a unique ID.' });
     }
+  }
 
-    if (!userId || typeof userId !== 'string') {
-        return res.status(400).json({ message: 'Invalid or missing camp: userId' });
-    }
+  // Check if the product exists before creating the order
+  const productExists = products.some(p => p.id === String(productId));
+  if (!productExists) {
+    return res.status(400).json({ message: 'Product does not exist. Order cannot be created without a valid product.' });
+  }
 
-    if (!productId || typeof productId !== 'number') {
-        return res.status(400).json({ message: 'Invalid or missing camp: productId' });
-    }
+  // Check if the user exists before creating the order
+  const userExists = users.some(u => u.id === String(userId));
+  if (!userExists) {
+    return res.status(400).json({ message: 'User does not exist. Order cannot be created without a valid user.' });
+  }
 
-    if (!quantity || typeof quantity !== 'number') {
-        return res.status(400).json({ message: 'Invalid or missing camp: quantity' });
-    }
-    
-    if (!status || typeof status !== 'string') {
-        return res.status(400).json({ message: 'Invalid or missing camp: status' });
-    }
+  // Convert id and quantity to strings before storing them
+  req.body.id = String(id);
+  req.body.quantity = String(quantity);
 
-    req.body.id = String(id);
-    req.body.productId = String(productId);
-    req.body.quantity = String(quantity);
-
-    next();
+  next();
 }
 
-// Get all orders
+// Routes for orders
 router.get('/', (req, res) => {
-    res.json(orders);
+  res.json(orders);
 });
 
-// Create a new order
 router.post('/', validateOrder, (req, res) => {
-    const newOrder = req.body;
-    orders.push(newOrder);
-    res.status(201).json(newOrder);
+  const newOrder = req.body;
+  orders.push(newOrder);
+  res.status(201).json(newOrder);
 });
 
-// Obtain an order by its ID
 router.get('/:id', (req, res) => {
-    const order = orders.find(o => o.id === req.params.id);
-    if (!order) return res.status(404).json({ message: 'Order not found' });
-    res.json(order);
+  const order = orders.find(o => o.id === req.params.id);
+  if (!order) return res.status(404).json({ message: 'Order not found' });
+  res.json(order);
+});
+
+router.put('/:id', validateOrder, (req, res) => {
+  const orderIndex = orders.findIndex(o => o.id === req.params.id);
+  if (orderIndex === -1) return res.status(404).json({ message: 'Order not found' });
+
+  orders[orderIndex] = { ...orders[orderIndex], ...req.body };
+  res.json(orders[orderIndex]);
+});
+
+router.delete('/:id', (req, res) => {
+  const orderIndex = orders.findIndex(o => o.id === req.params.id);
+  if (orderIndex === -1) return res.status(404).json({ message: 'Order not found' });
+
+  orders.splice(orderIndex, 1);
+  res.status(204).send();
 });
 
 module.exports = router;

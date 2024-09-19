@@ -1,56 +1,67 @@
 const express = require('express');
 const router = express.Router();
 
-let users = []; // Array created to store the users
+let users = []; // Array for storing users
 
-// Validate the correct user format
+// Middleware to validate the correct user format
 function validateUser(req, res, next) {
   const { id, name, email, age } = req.body;
 
-  // Check all required fields and their type
-  if (!id || typeof id !== 'number') {
-      return res.status(400).json({ message: 'Invalid or missing camp: id' });
+  // Check if id is a positive integer
+  if (!Number.isInteger(Number(id)) || Number(id) <= 0) {
+    return res.status(400).json({ message: 'Invalid or missing field: id. It must be a positive integer.' });
   }
 
-  if (!name || typeof name !== 'string') {
-      return res.status(400).json({ message: 'Invalid or missing camp: name' });
+  // Check if name is a non-empty string
+  if (typeof name !== 'string' || name.trim() === "") {
+    return res.status(400).json({ message: 'Invalid or missing field: name' });
   }
 
-  if (!email || typeof email !== 'string') {
-      return res.status(400).json({ message: 'Invalid or missing camp: email' });
+  // Check if email is a valid non-empty string
+  if (typeof email !== 'string' || email.trim() === "") {
+    return res.status(400).json({ message: 'Invalid or missing field: email' });
   }
 
-  if (!age || typeof age !== 'number') {
-      return res.status(400).json({ message: 'Invalid or missing camp: age' });
+  // Check if age is a positive number
+  if (!Number.isInteger(Number(age)) || Number(age) <= 0) {
+    return res.status(400).json({ message: 'Invalid or missing field: age. It must be a positive number.' });
   }
 
+  // Convert id and age to strings for storage
   req.body.id = String(id);
   req.body.age = String(age);
 
   next();
 }
 
-// Obtain all users
+// Route to get all users
 router.get('/', (req, res) => {
   res.json(users);
 });
 
-// Crete a new user
-router.post('/', (req, res) => {
+// Route to create a new user
+router.post('/', validateUser, (req, res) => {
   const newUser = req.body;
+
+  // Ensure the ID is unique
+  const existingUser = users.find(u => u.id === newUser.id);
+  if (existingUser) {
+    return res.status(400).json({ message: 'ID already exists, please use a unique ID.' });
+  }
+
   users.push(newUser);
   res.status(201).json(newUser);
 });
 
-// Obtain a user by their ID
+// Route to get a user by ID
 router.get('/:id', (req, res) => {
   const user = users.find(u => u.id === req.params.id);
   if (!user) return res.status(404).json({ message: 'User not found' });
   res.json(user);
 });
 
-// Update a user
-router.put('/:id', (req, res) => {
+// Route to update a user by ID
+router.put('/:id', validateUser, (req, res) => {
   const userIndex = users.findIndex(u => u.id === req.params.id);
   if (userIndex === -1) return res.status(404).json({ message: 'User not found' });
 
@@ -58,7 +69,7 @@ router.put('/:id', (req, res) => {
   res.json(users[userIndex]);
 });
 
-// Delete a user
+// Route to delete a user by ID
 router.delete('/:id', (req, res) => {
   const userIndex = users.findIndex(u => u.id === req.params.id);
   if (userIndex === -1) return res.status(404).json({ message: 'User not found' });
@@ -67,4 +78,4 @@ router.delete('/:id', (req, res) => {
   res.status(204).send();
 });
 
-module.exports = router;
+module.exports = { router, users };
